@@ -3,6 +3,7 @@ require 'json'
 require 'date'
 require 'command_line_reporter'
 require 'time_difference'
+require 'io/console'
 
 class BuildDuration
 	include CommandLineReporter
@@ -12,13 +13,22 @@ class BuildDuration
 	end
 
 	def run
-	  secret = File.read('secret.json')
+	    secret = File.read('secret.json')
 		secret_hash = JSON.parse(secret)
+
+        def get_password(prompt="Password: ")
+                print prompt
+                STDIN.noecho(&:gets).chomp
+        end
 
 		TeamCity.configure do |config|
 			config.endpoint = "#{secret_hash['teamcity_url']}/httpAuth/app/rest"
 			config.http_user = secret_hash['username']
-			config.http_password = secret_hash['password']
+			if secret_hash.has_key?("password")
+         		config.http_password = secret_hash['password']
+      		else
+         		config.http_password = get_password("Enter your TeamCity Password: ")
+      		end
 		end
 
 		build_configs = secret_hash['build_configs']
