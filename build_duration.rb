@@ -13,22 +13,22 @@ class BuildDuration
 	end
 
 	def run
-	    secret = File.read('secret.json')
+		secret = File.read('secret.json')
 		secret_hash = JSON.parse(secret)
 
-        def get_password(prompt="Password: ")
-                print prompt
-                STDIN.noecho(&:gets).chomp
-        end
+		def get_password(prompt="Password: ")
+				print prompt
+				STDIN.noecho(&:gets).chomp
+		end
 
 		TeamCity.configure do |config|
 			config.endpoint = "#{secret_hash['teamcity_url']}/httpAuth/app/rest"
 			config.http_user = secret_hash['username']
 			if secret_hash.has_key?("password")
-         		config.http_password = secret_hash['password']
-      		else
-         		config.http_password = get_password("Enter your TeamCity Password: ")
-      		end
+				config.http_password = secret_hash['password']
+			else
+				config.http_password = get_password("Enter your TeamCity Password: ")
+			end
 		end
 
 		build_configs = secret_hash['build_configs']
@@ -36,16 +36,16 @@ class BuildDuration
 		week_ago = today - 7
 
 	  report do
-	  	header :title => 'Gathering the average build times per app, this takes a couple minutes'
-	  	table :border => true do
+		header :title => 'Gathering the average build times per app, this takes a couple minutes'
+		table :border => true do
 			  row :header => true, :color => 'red'  do
-			    column 'BUILD CONFIG', :width => 30, :align => 'center'
-			    column 'BUILD DURATION', :width => 30, :padding => 5
+				column 'BUILD CONFIG', :width => 30, :align => 'center'
+				column 'BUILD DURATION', :width => 30, :padding => 5
 			  end
 
 			  for build_config in build_configs
-			  	vertical_spacing
-			    aligned("App Build Config: #{build_config}")
+				vertical_spacing
+				aligned("App Build Config: #{build_config}")
 
 					build_duration = Array.new
 
@@ -76,9 +76,9 @@ class BuildDuration
 						hh, mm = mm.divmod(60)
 
 						row do
-				      column build_config
-					    column "#{hh}h:#{mm}m:#{ss.floor}s"
-				    end
+					  column build_config
+						column "#{hh}h:#{mm}m:#{ss.floor}s"
+					end
 					else
 						row do
 							column build_config
@@ -87,7 +87,7 @@ class BuildDuration
 					end
 				end
 				vertical_spacing
-		 	end
+			end
 		end
 	end
 end
