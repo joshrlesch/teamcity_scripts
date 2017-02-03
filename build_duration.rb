@@ -39,8 +39,9 @@ class BuildDuration
 		header :title => 'Gathering the average build times per app, this takes a couple minutes'
 		table :border => true do
 			  row :header => true, :color => 'red'  do
-				column 'BUILD CONFIG', :width => 30, :align => 'center'
-				column 'BUILD DURATION', :width => 30, :padding => 5
+			    column 'BUILD CONFIG', :width => 30, :align => 'center'
+			    column 'BUILD DURATION', :width => 30, :padding => 5
+				column 'TIME IN QUEUE', :width => 30, :padding => 5
 			  end
 
 			  for build_config in build_configs
@@ -48,43 +49,44 @@ class BuildDuration
 				aligned("App Build Config: #{build_config}")
 
 					build_duration = Array.new
+					time_in_queue = Array.new
 
 					# Get all build ids in the last 7 days for specific build config
 					builds = TeamCity.builds(buildType: build_config, branch: 'unspecified:any', status: 'success')
 					builds.each do |build|
-						build_detail = TeamCity.build(id: build.id)
-
-						start_date = DateTime.parse(build_detail.startDate)
-						finish_date = DateTime.parse(build_detail.finishDate)
-
-						# Check to see if build happened in the last 7 days
-						# If so get the time diff in seconds
-						if start_date.between?(week_ago, today)
-							time_diff = TimeDifference.between(start_date, finish_date).in_seconds
-							build_duration.push(time_diff)
+						stats = TeamCity.build_statistics(build.id)
+						stats.each do |stat|
+							if stat.name.eql? "BuildDurationNetTime"
+								build_duration.push(stat.value.to_i)
+							end
+							if stat.name.eql? "TimeSpentInQueue"
+								time_in_queue.push(stat.value.to_i)
+							end
 						end
 
 						progress
 					end
 
 					if not build_duration.empty?
-						# Average out the durations and convert to seconds
-						average_sec = build_duration.inject(:+).to_f / build_duration.size
-
-						# Parse seconds to hours, minutes, seconds
-						mm, ss = average_sec.divmod(60)
-						hh, mm = mm.divmod(60)
-
-						row do
-					  column build_config
-						column "#{hh}h:#{mm}m:#{ss.floor}s"
-					end
+						build_average_sec = (build_duration.sum.to_f / build_duration.size) / 1000
+						build_duration = Time.at(build_average_sec).utc.strftime("%Hh:%Mm:%Ss")
 					else
-						row do
-							column build_config
-							column 'N/A'
-						end
+						build_duration = 'N/A'
 					end
+
+					if not time_in_queue.empty?
+						queue_average_sec = (time_in_queue.sum.to_f / time_in_queue.size) / 1000
+						queue_duration =  Time.at(queue_average_sec).utc.strftime("%Hh:%Mm:%Ss")
+					else
+						queue_duration = 'N/A'
+					end
+				
+					row do
+						column build_config
+						column build_duration
+						column queue_duration
+					end
+
 				end
 				vertical_spacing
 			end
